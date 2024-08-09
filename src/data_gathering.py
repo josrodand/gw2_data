@@ -1,7 +1,7 @@
 import pandas as pd
 import math
 
-from src.params.api_params import (DATA_GW2_URL, FIELDS, FILTERS, COLUMNS_SELECTED)
+from src.params.api_params import *
 
 
 class APIRequest:
@@ -60,6 +60,20 @@ class APIRequest:
         return data
     
 
+    def value_gold(self, value):
+
+        str_value = str(int(value))
+
+        gold = str_value[:-4] if str_value[:-4] != '' else '00'
+        gold = gold if len(gold) >= 2 else f"0{gold}" 
+        silver = str_value[-4:-2] if str_value[-4:-2] != '' else '00'
+        copper = str_value[-2:]
+
+        gold_value = f"{gold}G {silver}S {copper}C"
+
+        return gold_value
+
+
     def calculate_roi(self, sell_price, buy_price):
 
         if buy_price != 0:
@@ -68,7 +82,7 @@ class APIRequest:
             roi = 0
     
         return roi
-    
+
 
     def transform_data(self, data):
 
@@ -92,11 +106,36 @@ class APIRequest:
 
         data_transformed['profit'] = round(data_transformed['sell_price'] * 0.85 - data_transformed['buy_price'])
         data_transformed['total_profit'] = round(data_transformed['profit'] * data_transformed['daily_mod'])
+        data_transformed['total_profit_gold'] = data_transformed['total_profit'].apply(
+            lambda x: self.value_gold(x)
+        )
         data_transformed['ROI'] = data_transformed.apply(
             lambda row: self.calculate_roi(row['sell_price'], row['buy_price']),
             axis=1
         )
 
         return data_transformed
+
+
+    def filter_data(self, data):
+
+        data_transformed = data.copy()
+
+        # el 1day sold menor que una septima parte de 7d sold
+        data_filtered = data_transformed[data_transformed['1d_lower_than_7d_avg'] == True]
+
+        # daily_mod > 0
+        data_filtered = data_filtered[data_filtered['daily_mod'] > DAILY_MIN]
+        # ROI > 10 y < 100
+        data_filtered = data_filtered[data_filtered['ROI'] > ROI_MIN]
+        data_filtered = data_filtered[data_filtered['ROI'] < ROI_MAX]
+
+        # profit > 10 platas (1000)
+        data_filtered = data_filtered[data_filtered['profit'] >= PROFIT_MIN]
+
+        # ordenacion
+        data_filtered = data_filtered.sort_values('ROI', ascending=False)
+
+        return data_filtered
 
 

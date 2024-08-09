@@ -4,6 +4,7 @@ DATA_GW2_URL = 'https://api.datawars2.ie/gw2/v1/items/csv'
 FIELDS = [
     'id', 
     'name',
+    'name_es',
     'type',
     'rarity',
     'buy_quantity',
